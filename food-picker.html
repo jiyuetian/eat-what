@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什么？🍜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FFA07A 50%, #FFD93D 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 30px;
+        }
+
+        .display-area {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 50px 20px;
+            margin-bottom: 30px;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .spinning-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinning-overlay.active {
+            display: flex;
+        }
+
+        .spinning-text {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            animation: pulse 0.15s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.6; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1.05); }
+        }
+
+        .result {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .result.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .result.idle {
+            font-size: 20px;
+            color: rgba(255,255,255,0.7);
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .spin-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            margin-bottom: 20px;
+        }
+
+        .spin-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .spin-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .spin-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .spin-btn.spinning {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .spin-btn.spinning:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        
+
+        .options-section {
+            text-align: left;
+        }
+
+        .meal-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            background: #F5F5F5;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .meal-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .meal-tab:hover {
+            background: #E8E8E8;
+        }
+
+        .meal-tab.active {
+            background: #667eea;
+            color: white;
+            border-bottom-color: #4056D6;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .add-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            color: #667eea;
+            background: #EEF2FF;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .add-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .options-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .option-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #F5F5F5;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #333;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .option-tag .delete {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ddd;
+            color: #999;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option-tag .delete:hover {
+            background: #FF6B6B;
+            color: white;
+        }
+
+        .history-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #667eea;
+            background: #EEF2FF;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .history-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        
+
+        .history-section {
+            margin-bottom: 15px;
+        }
+
+        .history-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #667eea;
+            background: #EEF2FF;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .history-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .history-modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 70vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1001;
+        }
+
+        .history-modal-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .history-modal-list .history-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #FFF9E6;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .history-modal-list .history-meal {
+            font-size: 18px;
+            width: 28px;
+            text-align: center;
+        }
+
+        .history-modal-list .history-date {
+            font-size: 12px;
+            color: #999;
+            min-width: 110px;
+        }
+
+        .history-modal-list .history-food {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .modal-btn.full-width {
+            width: 100%;
+        }
+
+        .share-section {
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .share-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #667eea;
+            background: #EEF2FF;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .share-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+            z-index: 1001;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #E8E8E8;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .modal-btn.cancel {
+            background: #F5F5F5;
+            color: #666;
+        }
+
+        .modal-btn.confirm {
+            background: #667eea;
+            color: white;
+        }
+
+        .emoji {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .history-section {
+            margin-top: 20px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .history-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .history-clear {
+            font-size: 12px;
+            color: #FF6B6B;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: #FFF9E6;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: #999;
+            min-width: 120px;
+        }
+
+        .history-food {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🍜</div>
+        <div class="title">今天吃什么？</div>
+        <div class="subtitle">让选择困难症不再困扰</div>
+
+        <div class="display-area">
+            <div class="spinning-overlay" id="spinningOverlay">
+                <div class="spinning-text" id="spinningText">🤔</div>
+            </div>
+            <div class="result idle" id="result">点击下方按钮开始</div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn" onclick="spin()">
+            🎲 开始选择
+        </button>
+
+        <div class="options-section">
+            <div class="meal-tabs">
+                <div class="meal-tab active" id="lunchTab" onclick="switchMeal('lunch')">🍚 午饭</div>
+                <div class="meal-tab" id="dinnerTab" onclick="switchMeal('dinner')">🍽️ 晚饭</div>
+            </div>
+            <div class="section-header">
+                <span class="section-title">可选美食（点击 × 删除）</span>
+                <button class="add-btn" onclick="openModal()">+ 添加</button>
+            </div>
+            <div class="options-list" id="optionsList"></div>
+        </div>
+
+        <div class="history-section">
+            <button class="history-btn" onclick="openHistoryModal()">
+                📋 历史记录查看
+            </button>
+        </div>
+
+        <div class="share-section">
+            <button class="share-btn" onclick="shareOptions()">
+                📤 分享给同事一起选
+            </button>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content" style="position: relative;">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div class="modal-title">添加美食</div>
+            <input type="text" class="modal-input" id="foodInput" placeholder="输入美食名称，如：牛肉粉丝">
+            <div class="modal-actions">
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn confirm" onclick="addOption()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <div class="modal" id="historyModal">
+        <div class="history-modal-content">
+            <button class="modal-close" onclick="closeHistoryModal()">×</button>
+            <div class="modal-title">历史记录</div>
+            <div class="history-modal-list" id="historyModalList">
+                <div class="history-empty">还没有选择记录</div>
+            </div>
+            <button class="modal-btn cancel full-width" onclick="closeHistoryModal()">关闭</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let mealOptions = {
+            lunch: ['牛肉粉丝', '麻辣烫', '拉面', '黄焖鸡', '沙县小吃', '兰州拉面', '煎饼果子', '炒饭', '盖浇饭', '麻辣香锅', '酸辣粉', '包子馒头', '饺子', '炸鸡', '烧烤'],
+            dinner: ['红烧肉+2个蔬菜', '酸菜鱼+2个蔬菜', '卤牛肉+2个蔬菜', '清蒸鱼+2个蔬菜', '炖排骨+2个蔬菜', '烤鸭+2个蔬菜', '红烧鸡腿+2个蔬菜', '炒牛肉+2个蔬菜', '炖鸡汤+2个蔬菜', '红烧鱼+2个蔬菜']
+        };
+        let currentMeal = 'lunch';
+        let options = mealOptions.lunch;
+
+        let history = [];
+        let isSpinning = false;
+
+        function init() {
+            renderOptions();
+            checkUrlParams();
+        }
+
+        function switchMeal(meal) {
+            if (currentMeal === meal) return;
+            
+            currentMeal = meal;
+            options = mealOptions[meal];
+            
+            document.getElementById('lunchTab').classList.toggle('active', meal === 'lunch');
+            document.getElementById('dinnerTab').classList.toggle('active', meal === 'dinner');
+            
+            renderOptions();
+        }
+
+        function renderOptions() {
+            const list = document.getElementById('optionsList');
+            list.innerHTML = options.map((opt, i) => `
+                <div class="option-tag">
+                    <span>${opt}</span>
+                    <span class="delete" onclick="deleteOption(${i})">×</span>
+                </div>
+            `).join('');
+        }
+
+        function deleteOption(index) {
+            if (options.length <= 2) {
+                showToast('至少保留2个选项哦~');
+                return;
+            }
+            options.splice(index, 1);
+            renderOptions();
+            saveToLocal();
+        }
+
+        function openModal() {
+            document.getElementById('modal').classList.add('show');
+            document.getElementById('foodInput').value = '';
+            document.getElementById('foodInput').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+
+        function addOption() {
+            const input = document.getElementById('foodInput');
+            const value = input.value.trim();
+            if (!value) {
+                showToast('请输入美食名称');
+                return;
+            }
+            if (options.includes(value)) {
+                showToast('这个选项已经存在啦~');
+                return;
+            }
+            options.push(value);
+            renderOptions();
+            saveToLocal();
+            closeModal();
+            showToast(`添加成功：${value}`);
+        }
+
+        function spin() {
+            if (isSpinning) return;
+
+            if (options.length < 2) {
+                showToast('至少需要2个选项');
+                return;
+            }
+
+            isSpinning = true;
+
+            const spinBtn = document.getElementById('spinBtn');
+            const result = document.getElementById('result');
+            const spinningOverlay = document.getElementById('spinningOverlay');
+            const spinningText = document.getElementById('spinningText');
+
+            spinBtn.disabled = true;
+            spinBtn.classList.add('spinning');
+            spinBtn.innerHTML = '🎰 转动中...';
+            result.classList.remove('show', 'idle');
+            result.style.opacity = '0';
+            result.style.transform = 'scale(0.5)';
+
+            spinningOverlay.classList.add('active');
+
+            const foodEmojis = ['🍜', '🍲', '🍛', '🍱', '🥘', '🍝', '🥗', '🍕', '🌯', '🥡'];
+            let count = 0;
+            const maxCount = 30 + Math.floor(Math.random() * 20);
+            const interval = setInterval(() => {
+                const randomIndex = Math.floor(Math.random() * options.length);
+                const emoji = foodEmojis[Math.floor(Math.random() * foodEmojis.length)];
+                spinningText.textContent = options[randomIndex];
+                count++;
+
+                if (count >= maxCount) {
+                    clearInterval(interval);
+
+                    const finalIndex = Math.floor(Math.random() * options.length);
+                    const finalResult = options[finalIndex];
+
+                    spinningOverlay.classList.remove('active');
+                    result.textContent = finalResult;
+                    result.style.opacity = '0';
+                    result.style.transform = 'scale(1.3)';
+                    result.classList.add('show');
+
+                    setTimeout(() => {
+                        result.style.opacity = '1';
+                        result.style.transform = 'scale(1)';
+                    }, 50);
+
+                    addToHistory(finalResult);
+
+                    spinBtn.classList.remove('spinning');
+                    spinBtn.disabled = false;
+                    spinBtn.innerHTML = '🎲 再选一次';
+
+                    isSpinning = false;
+                }
+            }, 50);
+        }
+
+        function addToHistory(item) {
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+            history.unshift({
+                food: item,
+                meal: currentMeal,
+                date: dateStr,
+                time: timeStr
+            });
+
+            if (history.length > 50) history.pop();
+
+            saveHistory();
+        }
+
+        function renderHistoryModal() {
+            const list = document.getElementById('historyModalList');
+
+            if (history.length === 0) {
+                list.innerHTML = '<div class="history-empty">还没有选择记录</div>';
+                return;
+            }
+
+            list.innerHTML = history.map(h => {
+                const mealLabel = h.meal === 'lunch' ? '🍚' : '🍽️';
+                const mealText = h.meal === 'lunch' ? '午饭' : '晚饭';
+                return `
+                <div class="history-item">
+                    <span class="history-meal" title="${mealText}">${mealLabel}</span>
+                    <span class="history-date">${h.date} ${h.time}</span>
+                    <span class="history-food">${h.food}</span>
+                </div>
+            `;
+            }).join('');
+        }
+
+        function openHistoryModal() {
+            renderHistoryModal();
+            document.getElementById('historyModal').classList.add('show');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.remove('show');
+        }
+
+        function clearHistory() {
+            if (history.length === 0) return;
+            if (confirm('确定要清空所有选择记录吗？')) {
+                history = [];
+                saveHistory();
+                showToast('已清空选择记录');
+            }
+        }
+
+        function saveHistory() {
+            localStorage.setItem('foodPicker_history', JSON.stringify(history));
+        }
+
+        function shareOptions() {
+            const text = `今天吃什么？🎲\n\n可选：${options.join('、')}\n\n点击选择：${window.location.href}`;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制分享内容，快去发给同事吧！');
+            }).catch(() => {
+                showToast('复制失败，请手动复制');
+            });
+        }
+
+        function checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const foods = params.get('foods');
+            if (foods) {
+                try {
+                    const decoded = decodeURIComponent(foods);
+                    options = decoded.split(',');
+                    renderOptions();
+                } catch (e) {}
+            }
+        }
+
+        function saveToLocal() {
+            localStorage.setItem('foodPicker_options', JSON.stringify(options));
+        }
+
+        
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2500);
+        }
+
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.getElementById('foodInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addOption();
+        });
+
+        init();
+    </script>
+</body>
+</html>
